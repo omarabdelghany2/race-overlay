@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.log
+.DS_Store
+# local artifacts (not needed in the deploy)
+device_backup.json
+/hero_shot.png
+/map_sat.png
+/map_route.png
+.railwayignore

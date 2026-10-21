@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Race Overlay – Control</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; background:#0e1016; color:#fff; margin:0; padding:28px; }
+    h1 { font-size:20px; margin:0 0 4px; }
+    .sub { color:#8a93a6; margin-bottom:22px; font-size:14px; }
+    .card { background:#171a22; border:1px solid #262b36; border-radius:14px; padding:18px 20px; margin-bottom:16px; max-width:640px; }
+    .card h2 { font-size:14px; letter-spacing:1.5px; color:#8a93a6; text-transform:uppercase; margin:0 0 14px; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+    button { background:#2b6cff; color:#fff; border:0; border-radius:9px; padding:10px 16px; font-size:14px; font-weight:600; cursor:pointer; }
+    button.alt { background:#2a2f3a; }
+    button.danger { background:#c0392b; }
+    button:hover { filter:brightness(1.1); }
+    input { background:#0e1016; border:1px solid #333a47; color:#fff; border-radius:8px; padding:9px 11px; font-size:14px; width:120px; }
+    .stat { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid #222733; font-size:14px; }
+    .stat b { color:#fff; font-variant-numeric:tabular-nums; }
+    .k { color:#8a93a6; }
+    .pill { padding:2px 9px; border-radius:20px; font-size:12px; font-weight:700; }
+    .ok { background:#12402b; color:#35d07f; } .bad { background:#3f1512; color:#ff6b6b; } .warn { background:#403612; color:#feb60e; }
+    a { color:#6ea8ff; }
+    .range { width:260px; }
+  </style>
+</head>
+<body>
+  <h1>Race Overlay — Control Panel</h1>
+  <div class="sub">
+    <b>Map scene for OBS (satellite):</b> <a id="mapUrl" href="/map.html" target="_blank">/map.html</a><br>
+    Overlay only (over video): <a id="overlayUrl" href="/" target="_blank">/</a> &nbsp;·&nbsp;
+    Heart-rate page (phone): <a id="hrUrl" href="/hr.html" target="_blank">/hr.html</a>
+  </div>
+
+  <div class="card">
+    <h2>Admin token</h2>
+    <div class="row">
+      <input id="token" placeholder="admin token" style="width:220px" />
+      <span class="k">(from your .env — ADMIN_TOKEN)</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Race timer</h2>
+    <div class="row">
+      <button onclick="ctl('startTimer')">▶ Start now</button>
+      <button class="alt" onclick="setStart()">Set start time…</button>
+      <input id="startIso" placeholder="2026-10-22T06:00:00+02:00" style="width:240px" />
+      <button class="danger" onclick="ctl('resetTimer')">Reset</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Distance</h2>
+    <div class="row">
+      <span class="k">Total km</span><input id="totalKm" type="number" step="0.01" />
+      <button onclick="ctl('setTotalKm', document.getElementById('totalKm').value)">Set total</button>
+    </div>
+    <div class="row">
+      <span class="k">Covered km (manual fix)</span><input id="coveredKm" type="number" step="0.01" />
+      <button class="alt" onclick="ctl('setCoveredKm', document.getElementById('coveredKm').value)">Override covered</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Test heart rate (until the watch/phone are connected)</h2>
+    <div class="row">
+      <input class="range" id="hrRange" type="range" min="40" max="200" value="140" oninput="hrLabel()" />
+      <b id="hrVal" style="font-size:20px; color:#ff3b4e">140</b>
+      <button onclick="ctl('testHr', document.getElementById('hrRange').value)">Send test HR</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Live state</h2>
+    <div class="stat"><span class="k">PAJ connection</span><span id="s_paj" class="pill warn">…</span></div>
+    <div class="stat"><span class="k">GPS</span><b id="s_gps">—</b></div>
+    <div class="stat"><span class="k">Heart rate</span><b id="s_hr">—</b></div>
+    <div class="stat"><span class="k">Covered / Remaining</span><b id="s_dist">—</b></div>
+    <div class="stat"><span class="k">Race time</span><b id="s_timer">—</b></div>
+    <div class="stat"><span class="k">Battery (tracker)</span><b id="s_batt">—</b></div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    $("mapUrl").href = location.origin + "/map.html";
+    $("mapUrl").textContent = location.origin + "/map.html";
+    $("overlayUrl").href = location.origin + "/";
+    $("overlayUrl").textContent = location.origin + "/";
+    $("hrUrl").href = location.origin + "/hr.html";
+    $("hrUrl").textContent = location.origin + "/hr.html";
+    $("token").value = localStorage.getItem("adminToken") || "";
+    $("token").oninput = () => localStorage.setItem("adminToken", $("token").value);
+
+    function hrLabel(){ $("hrVal").textContent = $("hrRange").value; }
+    function setStart(){ ctl("setStart", $("startIso").value); }
+
+    async function ctl(action, value){
+      const r = await fetch("/api/control", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ token: $("token").value, action, value })
+      });
+      if(r.status === 401){ alert("Wrong admin token"); return; }
+    }
+
+    function fmtHMS(s){ s=Math.max(0,Math.floor(s)); const p=n=>String(n).padStart(2,"0");
+      return p(Math.floor(s/3600))+":"+p(Math.floor(s%3600/60))+":"+p(s%60); }
+
+    async function refresh(){
+      try{
+        const st = await (await fetch("/api/state")).json();
+        const paj = $("s_paj");
+        paj.textContent = st.health.pajOk===true?"connected":st.health.pajOk===false?"error":"…";
+        paj.className = "pill " + (st.health.pajOk===true?"ok":st.health.pajOk===false?"bad":"warn");
+        $("s_gps").textContent = st.gps.lat!=null ? `${st.gps.lat.toFixed(5)}, ${st.gps.lng.toFixed(5)} ${st.gps.stale?"(stale)":""}` : "no fix yet";
+        $("s_hr").textContent = st.hr.bpm!=null && !st.hr.stale ? st.hr.bpm+" bpm" : "—";
+        $("s_dist").textContent = `${st.distance.coveredKm} / ${st.distance.remainingKm} km (${st.distance.percent}%)`;
+        $("s_timer").textContent = st.timer.startMs ? fmtHMS((st.serverMs - st.timer.startMs)/1000) : "not started";
+        $("s_batt").textContent = st.gps.battery!=null ? st.gps.battery+"%" : "—";
+        if(!$("totalKm").value) $("totalKm").value = st.distance.totalKm;
+      }catch(_){}
+    }
+    setInterval(refresh, 1000); refresh();
+  </script>
+</body>
+</html>

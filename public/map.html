@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>Race Overlay — Live Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="overlay.css" />
+  <style>
+    /* Full-screen map behind everything */
+    #map { position: fixed; inset: 0; width: 1920px; height: 1080px; z-index: 0; background: #0c130f; }
+    .stage { z-index: 10; pointer-events: none; }
+    /* darken edges a touch so the HUD/logos pop over bright map areas */
+    .vignette { position: fixed; inset: 0; z-index: 5; pointer-events: none;
+      background: radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0,0,0,.45) 100%); }
+
+    /* live position marker */
+    .runner-dot { width: 22px; height: 22px; border-radius: 50%;
+      background: #feb60e; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.4); }
+    .runner-pulse { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px;
+      transform: translate(-50%,-50%); border-radius: 50%; background: #feb60e;
+      animation: ping 1.6s ease-out infinite; opacity: .6; }
+    /* Start/End flag with a downward arrow pointing at the exact spot */
+    .start-flag { box-sizing: border-box; width: 104px; height: 30px; display: flex;
+      align-items: center; justify-content: center; background: #35d07f; color: #08130d;
+      font-weight: 800; font-size: 13px; letter-spacing: 1px; border-radius: 8px;
+      border: 2px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,.5); white-space: nowrap; }
+    .start-flag::after { content: ""; position: absolute; top: 30px; left: 50%;
+      transform: translateX(-50%); border-left: 7px solid transparent;
+      border-right: 7px solid transparent; border-top: 10px solid #fff; }
+    @keyframes ping { 0% { transform: translate(-50%,-50%) scale(1); opacity:.6; }
+      100% { transform: translate(-50%,-50%) scale(3.4); opacity:0; } }
+    .leaflet-control-attribution { font-size: 10px; opacity: .5; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="vignette"></div>
+
+  <div class="stage">
+    <div class="sponsors" id="sponsors">
+      <div class="chip"><img src="logos/dannyrun.png" alt="Danny Run" /></div>
+      <div class="chip"><img src="logos/ppc.png" alt="Peak Pixel Cafe" /></div>
+      <div class="chip"><img src="logos/suunto.png" alt="Suunto" /></div>
+      <div class="chip"><img src="logos/salomon.png" alt="Salomon" /></div>
+      <div class="chip"><img src="logos/esn.png" alt="ESN" /></div>
+    </div>
+
+    <div class="hud">
+      <div class="title" id="title">DREI LÄNDER – EIN WEG</div>
+      <div class="tiles">
+        <div class="tile">
+          <div class="label">REMAINING</div>
+          <div class="value"><span id="remaining">--</span><span class="unit">km</span></div>
+        </div>
+        <div class="tile hr">
+          <div class="label">HEART RATE</div>
+          <div class="value"><span class="heart" id="heart">❤</span><span id="hr">--</span><span class="unit">bpm</span></div>
+        </div>
+        <div class="tile">
+          <div class="label">RACE TIME</div>
+          <div class="value mono" id="timer">00:00:00</div>
+        </div>
+      </div>
+      <div class="progress">
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <div class="progress-meta">
+          <span id="covered">0.0 km</span>
+          <span id="percent">0%</span>
+          <span id="total">of --</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="status" id="status" title="connection"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="overlay.js"></script>
+  <script src="map.js"></script>
+</body>
+</html>

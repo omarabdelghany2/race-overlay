@@ -1,0 +1,19 @@
+{
+  "name": "race-overlay",
+  "version": "1.0.0",
+  "description": "Live Twitch race overlay for OBS — PAJ GPS remaining distance + Suunto heart rate + race timer (PeakPixelCafe).",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "simulate": "node scripts/simulate.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}

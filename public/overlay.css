@@ -1,0 +1,155 @@
+:root {
+  --accent: #feb60e;      /* PAJ/route track colour */
+  --hr: #ff3b4e;          /* heart-rate red (matches Suunto triangle) */
+  --panel: rgba(14, 16, 22, 0.72);
+  --panel-brd: rgba(255, 255, 255, 0.12);
+  --text: #ffffff;
+  --muted: rgba(255, 255, 255, 0.55);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 1920px;
+  height: 1080px;
+  background: transparent;            /* transparent for OBS browser source */
+  overflow: hidden;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.stage { position: relative; width: 1920px; height: 1080px; }
+
+/* ---------- Sponsor bar ---------- */
+.sponsors {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+.chip {
+  height: 84px;
+  padding: 0 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+.chip img { height: 46px; width: auto; display: block; object-fit: contain; }
+/* circular badge logos need more height for equal visual weight */
+.chip img[alt="Danny Run"] { height: 68px; }
+
+/* ---------- HUD ---------- */
+.hud {
+  position: absolute;
+  left: 60px;
+  bottom: 60px;
+  min-width: 760px;
+  padding: 26px 32px 30px;
+  background: var(--panel);
+  border: 1px solid var(--panel-brd);
+  border-radius: 24px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--accent);
+  margin-bottom: 18px;
+  text-transform: uppercase;
+}
+
+.tiles { display: flex; gap: 46px; align-items: flex-end; }
+
+.tile { display: flex; flex-direction: column; gap: 6px; }
+
+.label {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: var(--muted);
+}
+
+.value {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 72px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.value .unit {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.mono { font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+
+.tile.hr .value { color: var(--hr); }
+.tile.hr .unit { color: rgba(255, 59, 78, 0.7); }
+.heart {
+  font-size: 46px;
+  color: var(--hr);
+  transform-origin: center;
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  18% { transform: scale(1.22); }
+  40% { transform: scale(1); }
+}
+
+/* ---------- Progress ---------- */
+.progress { margin-top: 24px; }
+.bar {
+  height: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--accent), #ffd766);
+  transition: width 0.8s ease;
+}
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.progress-meta #percent { color: var(--accent); }
+
+/* ---------- states ---------- */
+.stale { opacity: 0.4; }
+.heart.stopped { animation: none; opacity: 0.4; }
+
+.status {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #888;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+.status.ok { background: #35d07f; }
+.status.warn { background: var(--accent); }
+.status.bad { background: var(--hr); }

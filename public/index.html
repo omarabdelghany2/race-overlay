@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>Race Overlay</title>
+  <link rel="stylesheet" href="overlay.css" />
+</head>
+<body>
+  <div id="stage" class="stage">
+
+    <!-- Sponsor bar: always displayed -->
+    <div class="sponsors" id="sponsors">
+      <div class="chip"><img src="logos/dannyrun.png" alt="Danny Run" /></div>
+      <div class="chip"><img src="logos/ppc.png" alt="Peak Pixel Cafe" /></div>
+      <div class="chip"><img src="logos/suunto.png" alt="Suunto" /></div>
+      <div class="chip"><img src="logos/salomon.png" alt="Salomon" /></div>
+      <div class="chip"><img src="logos/esn.png" alt="ESN" /></div>
+    </div>
+
+    <!-- Main HUD (lower third, bottom-left) -->
+    <div class="hud">
+      <div class="title" id="title">DREI LÄNDER – EIN WEG</div>
+
+      <div class="tiles">
+        <div class="tile">
+          <div class="label">REMAINING</div>
+          <div class="value"><span id="remaining">--</span><span class="unit">km</span></div>
+        </div>
+
+        <div class="tile hr">
+          <div class="label">HEART RATE</div>
+          <div class="value">
+            <span class="heart" id="heart">❤</span>
+            <span id="hr">--</span><span class="unit">bpm</span>
+          </div>
+        </div>
+
+        <div class="tile">
+          <div class="label">RACE TIME</div>
+          <div class="value mono" id="timer">00:00:00</div>
+        </div>
+      </div>
+
+      <div class="progress">
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <div class="progress-meta">
+          <span id="covered">0.0 km</span>
+          <span id="percent">0%</span>
+          <span id="total">of --</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- tiny status dot (dev/reliability indicator) -->
+    <div class="status" id="status" title="connection"></div>
+  </div>
+
+  <script src="overlay.js"></script>
+</body>
+</html>
