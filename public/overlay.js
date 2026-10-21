@@ -27,21 +27,6 @@
   function render(st) {
     clockOffset = st.serverMs - Date.now();
 
-    // Heart rate
-    const hrEl = $("hr");
-    const heart = $("heart");
-    if (st.hr.bpm && !st.hr.stale) {
-      hrEl.textContent = st.hr.bpm;
-      heart.classList.remove("stopped");
-      // beat the heart at the real rate (clamped)
-      const dur = Math.min(1.5, Math.max(0.35, 60 / st.hr.bpm));
-      heart.style.animationDuration = dur + "s";
-    } else {
-      hrEl.textContent = "--";
-      heart.classList.add("stopped");
-    }
-    setStale($("hr").parentElement, st.hr.stale || st.hr.bpm == null);
-
     // Distance
     const d = st.distance;
     $("remaining").textContent = d.remainingKm != null ? d.remainingKm.toFixed(1) : "--";
