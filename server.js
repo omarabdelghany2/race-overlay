@@ -4,8 +4,10 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocketServer } from "ws";
+import fs from "fs";
 import { getLastPoints, getPointsSince, getDevices } from "./lib/paj.js";
 import { haversine, odometer } from "./lib/geo.js";
+import { RouteMatcher } from "./lib/route.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -43,6 +45,22 @@ const state = {
 
 // Auto-start the timer once we pass the configured start time.
 if (state.raceStartMs && Date.now() >= state.raceStartMs) state.timerRunning = true;
+
+// ---------------- route matcher (snap GPS onto the known course) ----------------
+// Covered distance = how far along the real 206 km route the athlete is. This is
+// accurate on a winding trail and robust to GPS gaps, unlike a straight-line odometer.
+let matcher = null;
+try {
+  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, "public", "route.json"), "utf8"));
+  const coords = (raw.coordinates || []).map(([lng, lat]) => [lat, lng]); // [lng,lat] -> [lat,lng]
+  if (coords.length > 1) {
+    matcher = new RouteMatcher(coords);
+    state.totalKm = Math.round((matcher.totalM / 1000) * 100) / 100; // true route length
+    console.log(`[route] loaded ${coords.length} pts, ${(matcher.totalM / 1000).toFixed(2)} km`);
+  }
+} catch (e) {
+  console.warn("[route] not loaded (using odometer fallback):", e.message);
+}
 
 // ---------------- derived snapshot sent to clients ----------------
 function snapshot() {
@@ -113,9 +131,15 @@ function foldPoints(points) {
   const fresh = points.filter((p) => p.ts > state.lastPointTs && p.ts >= raceStartSec);
   if (!fresh.length) return;
 
-  // Prepend the last counted point so the first new segment is measured correctly.
-  const seq = state.lastOdoPoint ? [state.lastOdoPoint, ...fresh] : fresh;
-  state.odoM += odometer(seq);
+  // Covered distance: snap onto the known route (accurate on winding trails and
+  // robust to GPS gaps). Fall back to the raw odometer only if no route loaded.
+  if (matcher) {
+    for (const p of fresh) matcher.onPoint(p.lat, p.lng, p.ts);
+    state.odoM = matcher.progressM;
+  } else {
+    const seq = state.lastOdoPoint ? [state.lastOdoPoint, ...fresh] : fresh;
+    state.odoM += odometer(seq);
+  }
 
   const last = fresh[fresh.length - 1];
   state.lastOdoPoint = { lat: last.lat, lng: last.lng, ts: last.ts };
@@ -132,6 +156,7 @@ function resetOdometer(raceStartMs) {
   state.lastOdoPoint = null;
   state.lastPointTs = raceStartMs ? Math.floor(raceStartMs / 1000) - 1 : 0;
   state.track = [];
+  if (matcher) matcher.reset();
 }
 
 // On startup, if the race already began, rebuild the odometer from history so a
@@ -142,7 +167,13 @@ async function backfill() {
     const sinceUnix = Math.floor(state.raceStartMs / 1000);
     const { points } = await getPointsSince(cfg, sinceUnix);
     if (points.length) {
-      state.odoM = odometer(points);
+      if (matcher) {
+        matcher.reset();
+        for (const p of points) matcher.onPoint(p.lat, p.lng, p.ts);
+        state.odoM = matcher.progressM;
+      } else {
+        state.odoM = odometer(points);
+      }
       const latest = points[points.length - 1];
       state.lastOdoPoint = { lat: latest.lat, lng: latest.lng, ts: latest.ts };
       state.lastPointTs = latest.ts;
@@ -150,7 +181,9 @@ async function backfill() {
         lat: latest.lat, lng: latest.lng, ts: latest.ts * 1000,
         speedKmh: latest.speedKmh, battery: latest.battery,
       };
-      console.log(`[backfill] ${points.length} pts, odometer=${(state.odoM / 1000).toFixed(2)} km`);
+      state.track = points.map((p) => ({ lat: p.lat, lng: p.lng, ts: p.ts }));
+      if (state.track.length > 6000) state.track = state.track.slice(-6000);
+      console.log(`[backfill] ${points.length} pts, covered=${(state.odoM / 1000).toFixed(2)} km`);
     } else {
       console.log("[backfill] no history points yet");
     }
@@ -214,7 +247,7 @@ app.get("/api/track", (_req, res) => {
 });
 
 // Control panel actions (start/reset timer, adjust total distance, test HR).
-app.post("/api/control", (req, res) => {
+app.post("/api/control", async (req, res) => {
   const { token, action, value } = req.body || {};
   if (ADMIN_TOKEN && token !== ADMIN_TOKEN) return res.status(401).json({ error: "bad token" });
   switch (action) {
@@ -227,6 +260,7 @@ app.post("/api/control", (req, res) => {
       state.raceStartMs = Date.parse(value);
       state.timerRunning = state.raceStartMs ? Date.now() >= state.raceStartMs : false;
       resetOdometer(state.raceStartMs);
+      await backfill(); // recompute covered distance from the new start time
       break;
     case "resetTimer":
       state.raceStartMs = null;
