@@ -159,8 +159,20 @@ async function backfill() {
   }
 }
 
+// Flip the race timer on (and backfill the distance already covered) once we
+// pass the start time — even if the server was already running before it.
+async function maybeAutoStart() {
+  if (state.timerRunning || !state.raceStartMs) return;
+  if (Date.now() >= state.raceStartMs) {
+    state.timerRunning = true;
+    console.log("[timer] auto-started at race start — backfilling distance");
+    await backfill();
+  }
+}
+
 // ---------------- PAJ poll loop ----------------
 async function poll() {
+  await maybeAutoStart();
   try {
     const { points } = await getLastPoints(cfg, 25);
     foldPoints(points);
